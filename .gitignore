@@ -1,0 +1,16 @@
+experiments/
+# data/*.csv
+
+# Ignore all __pycache__ directories recursively
+__pycache__/
+
+# Ignore all compiled Python files recursively
+*.py[cod]
+*.pyd
+*.pyc
+
+# Optional: Ignore caches in subdirectories too
+**/__pycache__/
+**/*.py[cod]
+**/*.pyd
+**/*.pyc
