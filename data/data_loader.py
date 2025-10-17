@@ -31,11 +31,15 @@ class DroneGraphDataset(Dataset):
         self.valid_indices = self._build_indices()
 
     def _build_indices(self):
-        """Return all valid (flight_id, current_time_index) pairs with enough lookback"""
         indices = []
         for fid, timesteps in self.flight_timesteps.items():
             for i in range(self.lookback, len(timesteps)):
-                indices.append((fid, i))
+                current_time = timesteps[i]
+                df_current = self.flight_data[fid][self.flight_data[fid]['time_stamp'] == current_time]
+                if len(df_current) == 6:  # only keep full timesteps
+                    indices.append((fid, i))
+                else:
+                    print(f"[Skipping] Flight {fid}, timestep {current_time} has {len(df_current)} drones")
         return indices
 
     def __len__(self):
