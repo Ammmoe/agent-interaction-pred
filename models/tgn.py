@@ -55,7 +55,7 @@ class DroneRelationModel(nn.Module):
         self.hidden_dim = hidden_dim
 
         # Self-attention block
-        self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
+        # self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
 
         # Relation prediction head
         self.relation_head = nn.Sequential(
@@ -74,8 +74,9 @@ class DroneRelationModel(nn.Module):
         """
         # Self-attention refinement
         x = context_embeddings.unsqueeze(0)  # add batch dim: [1, num_drones, hidden_dim]
-        refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
-        node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
+        # refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
+        # node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
+        node_emb = x.squeeze(0)  # No self-attention, just use context embeddings
 
         # Pairwise relation prediction
         src = node_emb[relationships[:, 0]]
