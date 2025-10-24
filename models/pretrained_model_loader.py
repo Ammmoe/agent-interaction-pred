@@ -93,11 +93,10 @@ def extract_context_embeddings(model, traj_data, scaler_X, lookback, features_pe
             context = torch.bmm(attn_weights.unsqueeze(1), enc_output).squeeze(1)
             context_embeddings.append(context)
 
-    context_embeddings = torch.cat(context_embeddings, dim=0)  # [num_agents, enc_hidden*2]
-    return context_embeddings
+        context_embeddings = torch.cat(context_embeddings, dim=0)  # [num_agents, enc_hidden*2]
+        return context_embeddings
 
 
-@torch.no_grad()
 def extract_decoder_embeddings(model, traj_data, scaler_X, lookback, features_per_agent, device):
     """
     Extract per-agent embeddings from the decoder GRU step.
