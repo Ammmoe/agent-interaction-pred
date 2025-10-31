@@ -63,7 +63,7 @@ class TrajPredictor(nn.Module):
     """
 
     def __init__(
-        self, input_size=3, enc_hidden_size=64, dec_hidden_size=64, num_layers=1
+        self, input_size=6, enc_hidden_size=64, dec_hidden_size=64, num_layers=1
     ):
         super().__init__()
         self.input_size = input_size
