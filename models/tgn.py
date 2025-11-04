@@ -61,9 +61,10 @@ import torch.optim as optim
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class DroneRelationModel(nn.Module):
-    def __init__(self, context_dim, hidden_dim=None, num_heads=1, device="cpu"):
+    def __init__(self, context_dim, hidden_dim=None, num_heads=4, device="cpu"):
         super().__init__()
         self.device = device
         if hidden_dim is None:
@@ -71,7 +72,7 @@ class DroneRelationModel(nn.Module):
         self.hidden_dim = hidden_dim
 
         # Self-attention block
-        # self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
+        self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
 
         # Relation prediction head
         self.relation_head = nn.Sequential(
@@ -81,7 +82,7 @@ class DroneRelationModel(nn.Module):
             nn.Sigmoid()
         )
 
-        self.bilinear = nn.Bilinear(hidden_dim, hidden_dim, hidden_dim)
+        # self.bilinear = nn.Bilinear(hidden_dim, hidden_dim, hidden_dim)
 
     def forward(self, current_features, context_embeddings, relationships):
         """
@@ -92,16 +93,16 @@ class DroneRelationModel(nn.Module):
         """
         # Self-attention refinement
         x = context_embeddings.unsqueeze(0)  # add batch dim: [1, num_drones, hidden_dim]
-        # refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
-        # node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
+        refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
+        node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
         node_emb = x.squeeze(0)  # No self-attention, just use context embeddings
 
         # Pairwise relation prediction
         src = node_emb[relationships[:, 0]]
         dst = node_emb[relationships[:, 1]]
-        bilinear = self.bilinear(src, dst)
+        # bilinear = self.bilinear(src, dst)
         pair_emb = torch.cat([src, dst, dst - src, src * dst], dim=-1)  # [num_pairs, 4*decoder_hidden_dim]
-        # pair_emb = torch.cat([dst - src], dim=-1)
+        # pair_emb = torch.cat([src, dst], dim=-1)
         preds = self.relation_head(pair_emb).squeeze(1)
         return preds
 
