@@ -59,52 +59,52 @@ import torch.optim as optim
 #         return preds
 
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
 
-class DroneRelationModel(nn.Module):
-    def __init__(self, context_dim, hidden_dim=None, num_heads=4, device="cpu"):
-        super().__init__()
-        self.device = device
-        if hidden_dim is None:
-            hidden_dim = context_dim
-        self.hidden_dim = hidden_dim
+# class DroneRelationModel(nn.Module):
+#     def __init__(self, context_dim, hidden_dim=None, num_heads=1, device="cpu"):
+#         super().__init__()
+#         self.device = device
+#         if hidden_dim is None:
+#             hidden_dim = context_dim
+#         self.hidden_dim = hidden_dim
 
-        # Self-attention block
-        self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
+#         # Self-attention block
+#         self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=num_heads, batch_first=True)
 
-        # Relation prediction head
-        self.relation_head = nn.Sequential(
-            nn.Linear(4 * hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1),
-            nn.Sigmoid()
-        )
+#         # Relation prediction head
+#         self.relation_head = nn.Sequential(
+#             nn.Linear(4 * hidden_dim, hidden_dim),
+#             nn.GELU(),
+#             nn.Linear(hidden_dim, 1),
+#             nn.Sigmoid()
+#         )
 
-        # self.bilinear = nn.Bilinear(hidden_dim, hidden_dim, hidden_dim)
+#         # self.bilinear = nn.Bilinear(hidden_dim, hidden_dim, hidden_dim)
 
-    def forward(self, current_features, context_embeddings, relationships):
-        """
-        Args:
-            current_features: [num_drones, 4]
-            context_embeddings: [num_drones, hidden_dim]
-            relationships: [num_pairs, 2]
-        """
-        # Self-attention refinement
-        x = context_embeddings.unsqueeze(0)  # add batch dim: [1, num_drones, hidden_dim]
-        refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
-        node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
-        node_emb = x.squeeze(0)  # No self-attention, just use context embeddings
+#     def forward(self, current_features, context_embeddings, relationships):
+#         """
+#         Args:
+#             current_features: [num_drones, 4]
+#             context_embeddings: [num_drones, hidden_dim]
+#             relationships: [num_pairs, 2]
+#         """
+#         # Self-attention refinement
+#         x = context_embeddings.unsqueeze(0)  # add batch dim: [1, num_drones, hidden_dim]
+#         refined_emb, attn_weights = self.self_attn(x, x, x)  # Self-attention
+#         node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
+#         node_emb = x.squeeze(0)  # No self-attention, just use context embeddings
 
-        # Pairwise relation prediction
-        src = node_emb[relationships[:, 0]]
-        dst = node_emb[relationships[:, 1]]
-        # bilinear = self.bilinear(src, dst)
-        pair_emb = torch.cat([src, dst, dst - src, src * dst], dim=-1)  # [num_pairs, 4*decoder_hidden_dim]
-        # pair_emb = torch.cat([src, dst], dim=-1)
-        preds = self.relation_head(pair_emb).squeeze(1)
-        return preds
+#         # Pairwise relation prediction
+#         src = node_emb[relationships[:, 0]]
+#         dst = node_emb[relationships[:, 1]]
+#         # bilinear = self.bilinear(src, dst)
+#         pair_emb = torch.cat([src, dst, dst - src, src * dst], dim=-1)  # [num_pairs, 4*decoder_hidden_dim]
+#         # pair_emb = torch.cat([src, dst], dim=-1)
+#         preds = self.relation_head(pair_emb).squeeze(1)
+#         return preds
 
 
 # class DroneRelationModel(nn.Module):
@@ -156,42 +156,52 @@ class DroneRelationModel(nn.Module):
 #         return probs, logits
 
 
-# class DroneRelationModel(nn.Module):
-#     def __init__(self, context_dim, hidden_dim=None, device="cpu"):
-#         super().__init__()
-#         self.device = device
-#         if hidden_dim is None:
-#             hidden_dim = context_dim
-#         self.hidden_dim = hidden_dim
+class DroneRelationModel(nn.Module):
+    def __init__(self, context_dim, hidden_dim=None, device="cpu"):
+        super().__init__()
+        self.device = device
+        if hidden_dim is None:
+            hidden_dim = context_dim
+        self.hidden_dim = hidden_dim
 
-#         # Relation prediction head
-#         self.relation_head = nn.Sequential(
-#             nn.Linear(4 * hidden_dim, hidden_dim),
-#             nn.ReLU(),
-#             nn.Linear(hidden_dim, 1)  # raw logits
-#         )
+        # Relation prediction head
+        self.relation_head = nn.Sequential(
+            nn.Linear(4 * hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)  # raw logits
+        )
+        
+        # Self-attention block
+        self.self_attn = nn.MultiheadAttention(embed_dim=hidden_dim, num_heads=1, batch_first=True)
 
-#     def forward(self, current_features, decoder_outputs, relationships, num_friendly, num_unauth):
-#         """
-#         Args:
-#             decoder_outputs: [num_drones, decoder_hidden_dim] (output from trajectory decoder)
-#             relationships: [num_pairs, 2] (friendly_idx, unauth_idx)
-#             num_friendly: number of friendly drones at this timestep
-#             num_unauth: number of unauthorized drones
-#         """
-#         # Node embeddings are directly the decoder outputs
-#         node_emb = decoder_outputs  # [num_drones, decoder_hidden_dim]
+    def forward(self, current_features, decoder_outputs, relationships, num_friendly, num_unauth):
+        """
+        Args:
+            decoder_outputs: [num_drones, decoder_hidden_dim] (output from trajectory decoder)
+            relationships: [num_pairs, 2] (friendly_idx, unauth_idx)
+            num_friendly: number of friendly drones at this timestep
+            num_unauth: number of unauthorized drones
+        """
+        # Node embeddings are directly the decoder outputs
+        node_emb = decoder_outputs  # [num_drones, decoder_hidden_dim]
+        
+        # refined_emb, attn_weights = self.self_attn(
+        #     node_emb.unsqueeze(0),
+        #     node_emb.unsqueeze(0),
+        #     node_emb.unsqueeze(0)
+        # )
+        # node_emb = refined_emb.squeeze(0)  # [num_drones, hidden_dim]
 
-#         # Pairwise relation embeddings
-#         src = node_emb[relationships[:, 0]]  # friendly drones repeated
-#         dst = node_emb[relationships[:, 1]]  # unauthorized drones repeated
-#         pair_emb = torch.cat([src, dst, src - dst, src * dst], dim=-1)  # [num_pairs, 4*decoder_hidden_dim]
+        # Pairwise relation embeddings
+        src = node_emb[relationships[:, 0]]  # friendly drones repeated
+        dst = node_emb[relationships[:, 1]]  # unauthorized drones repeated
+        pair_emb = torch.cat([src, dst, src - dst, src * dst], dim=-1)  # [num_pairs, 4*decoder_hidden_dim]
 
-#         # Compute logits per pair
-#         logits = self.relation_head(pair_emb).squeeze(1)  # [num_pairs]
+        # Compute logits per pair
+        logits = self.relation_head(pair_emb).squeeze(1)  # [num_pairs]
 
-#         # Reshape to [num_friendly, num_unauth] for softmax
-#         logits = logits.view(num_friendly, num_unauth)   # [num_friendly, num_unauth]
-#         probs = torch.softmax(logits, dim=1)            # softmax over unauthorized drones
+        # Reshape to [num_friendly, num_unauth] for softmax
+        logits = logits.view(num_friendly, num_unauth)   # [num_friendly, num_unauth]
+        probs = torch.softmax(logits, dim=1)            # softmax over unauthorized drones
 
-#         return probs, logits
+        return probs, logits
